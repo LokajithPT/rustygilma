@@ -1,2 +1,4 @@
 rustc client.rs
-./client
+
+mv client omgg 
+sudo mv omgg /usr/local/bin/

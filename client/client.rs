@@ -1,7 +1,7 @@
 use std::net::TcpStream;
 use std::io::{self, Write, Read};
 use std::fs::{self, File};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::env;
 use std::time::Instant;
 
@@ -107,17 +107,36 @@ fn send_directory(
 }
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        println!("Usage: {} <command>", args[0]);
+        println!("Available commands: vechuko");
+        return;
+    }
+    let command = &args[1];
+
+    let path_to_send: PathBuf = match command.as_str() {
+        "vechuko" => env::current_dir().unwrap(),
+        _ => {
+            println!("Unknown command: {}", command);
+            return;
+        }
+    };
+
+    if !path_to_send.is_dir() {
+        println!("Error: '{}' is not a directory.", path_to_send.display());
+        return;
+    }
+
     match TcpStream::connect("127.0.0.1:8888") {
         Ok(mut stream) => {
             println!("Connected to server.");
 
-            let current_path = env::current_dir().unwrap();
-            
-            println!("Calculating sync stats...");
-            let (total_size, total_files) = get_sync_stats(&current_path);
+            println!("Calculating sync stats for '{}'...", path_to_send.display());
+            let (total_size, total_files) = get_sync_stats(&path_to_send);
             println!("Ready to send {} files ({} bytes).", total_files, total_size);
 
-            let dir_name = current_path.file_name().unwrap().to_str().unwrap();
+            let dir_name = path_to_send.file_name().unwrap().to_str().unwrap();
             let start_command = format!("START_SESSION {}\n", dir_name);
             stream.write_all(start_command.as_bytes()).unwrap();
             println!("Starting session for directory: {}", dir_name);
@@ -128,8 +147,8 @@ fn main() {
 
             send_directory(
                 &mut stream,
-                &current_path,
-                &current_path,
+                &path_to_send,
+                &path_to_send,
                 &mut overall_bytes_sent,
                 total_size,
                 &mut files_sent_count,
@@ -139,9 +158,15 @@ fn main() {
 
             // Final progress update to show 100%
             let bar = format!("[{}]", "█".repeat(40));
+            let elapsed = overall_start_time.elapsed();
+            let speed_mbps = if elapsed.as_secs_f64() > 0.0 {
+                (total_size as f64 / 1_000_000.0) / elapsed.as_secs_f64() * 8.0
+            } else {
+                0.0
+            };
             print!(
-                "\rSyncing: {} 100.00% ({}/{} files, ... Mbps) ",
-                bar, total_files, total_files
+                "\rSyncing: {} 100.00% ({}/{} files, {:.2} Mbps) ",
+                bar, total_files, total_files, speed_mbps
             );
             io::stdout().flush().unwrap();
 
