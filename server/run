@@ -1,0 +1,2 @@
+rustc server.rs
+./server 
