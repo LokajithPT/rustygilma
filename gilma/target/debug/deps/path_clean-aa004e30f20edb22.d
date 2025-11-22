@@ -1,0 +1,5 @@
+/home/shittake/code/rustshit/kannadi/target/debug/deps/path_clean-aa004e30f20edb22.d: /home/shittake/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/path-clean-1.0.1/src/lib.rs
+
+/home/shittake/code/rustshit/kannadi/target/debug/deps/libpath_clean-aa004e30f20edb22.rmeta: /home/shittake/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/path-clean-1.0.1/src/lib.rs
+
+/home/shittake/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/path-clean-1.0.1/src/lib.rs:
