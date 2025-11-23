@@ -1,0 +1,7 @@
+/home/shittake/code/rustygilma/gilma/target/debug/deps/pkg_config-27318cb7412d9ab4.d: /home/shittake/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pkg-config-0.3.32/src/lib.rs
+
+/home/shittake/code/rustygilma/gilma/target/debug/deps/libpkg_config-27318cb7412d9ab4.rlib: /home/shittake/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pkg-config-0.3.32/src/lib.rs
+
+/home/shittake/code/rustygilma/gilma/target/debug/deps/libpkg_config-27318cb7412d9ab4.rmeta: /home/shittake/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pkg-config-0.3.32/src/lib.rs
+
+/home/shittake/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pkg-config-0.3.32/src/lib.rs:

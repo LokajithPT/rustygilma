@@ -5,9 +5,10 @@ use std::path::PathBuf;
 use tokio::fs;
 use tokio::io::{AsyncWriteExt, AsyncBufReadExt, AsyncReadExt};
 use tokio::net::TcpStream;
+use colored::*;
 
 #[derive(Parser, Debug)]
-#[command(name = "gilma", version, about, long_about = None)]
+#[command(name = "gilma", version, about = "Gilma - Awesome File Sync Tool", long_about = None)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -15,12 +16,11 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// Pushes a single file to the gilma-server
-    ///just pushed it all man 
+    /// Push entire directory to server
     Vechuko,
-    /// Lists all folders in the storage
+    /// List all folders in storage
     Kaami,
-    /// Pulls a mentioned folder from storage
+    /// Pull a specific folder from storage
     Vangiko {
         /// Name of the folder to pull
         folder_name: String,
@@ -36,22 +36,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match &cli.command {
         Commands::Vechuko => { 
             if let Err(e) = push_directory().await {
-                eprintln!("Error pushing directory: {}", e);
+                eprintln!("{}", format!("Error pushing directory: {}", e).red().bold());
             }
         }
         Commands::Kaami => {
             if let Err(e) = list_folders().await {
-                eprintln!("Error listing folders: {}", e);
+                eprintln!("{}", format!("Error listing folders: {}", e).red().bold());
             }
         }
         Commands::Vangiko { folder_name } => {
             if let Err(e) = pull_folder(folder_name).await {
-                eprintln!("Error pulling folder: {}", e);
+                eprintln!("{}", format!("Error pulling folder: {}", e).red().bold());
             }
         }
         Commands::Sync => {
             if let Err(e) = sync_directory().await {
-                eprintln!("Error syncing directory: {}", e);
+                eprintln!("{}", format!("Error syncing directory: {}", e).red().bold());
             }
         }
     }
@@ -65,7 +65,7 @@ async fn sync_directory() -> Result<(), Box<dyn std::error::Error>> {
 
     // First connection: check server files
     let mut stream = TcpStream::connect("127.0.0.1:8080").await?;
-    println!("Connected to server for sync check.");
+    println!("{}", "Connected to server for sync check".green().bold());
 
     let check_cmd = format!("CHECK {}\n", dir_name);
     stream.write_all(check_cmd.as_bytes()).await?;
@@ -116,11 +116,11 @@ async fn sync_directory() -> Result<(), Box<dyn std::error::Error>> {
     }
     
     if files_to_send.is_empty() {
-        println!("No files need syncing. Everything is up to date.");
+        println!("{}", "No files need syncing. Everything is up to date.".green().bold());
         return Ok(());
     }
     
-    println!("Syncing {} changed files...", files_to_send.len());
+    println!("{}", format!("Syncing {} changed files...", files_to_send.len()).yellow().bold());
     
     // Second connection: send changed files
     let mut stream = TcpStream::connect("127.0.0.1:8080").await?;
@@ -129,7 +129,10 @@ async fn sync_directory() -> Result<(), Box<dyn std::error::Error>> {
     let sync_cmd = format!("SYNC_DIR {}\n", dir_name);
     stream.write_all(sync_cmd.as_bytes()).await?;
     
+    let mut total_bytes = 0;
+    
     // Send only changed files
+    let files_count = files_to_send.len();
     for (relative_path, full_path) in files_to_send {
         let content = fs::read(&full_path).await?;
         
@@ -137,27 +140,34 @@ async fn sync_directory() -> Result<(), Box<dyn std::error::Error>> {
         stream.write_all(file_cmd.as_bytes()).await?;
         stream.write_all(&content).await?;
         
-        println!("Synced file: {} ({} bytes)", relative_path, content.len());
+        println!("  {} {} ({} bytes)", "SYNC".cyan(), relative_path.bright_white(), content.len().to_string().dimmed());
+        total_bytes += content.len();
     }
     
     // Send END_SYNC command
     stream.write_all(b"END_SYNC\n").await?;
-    println!("Sync complete.");
+    println!("{}", "Sync complete!".green().bold());
+    println!("{}", format!("Summary: {} files, {} bytes synced", files_count, total_bytes).magenta());
     
     Ok(())
 }
 
 async fn push_directory() -> Result<(), Box<dyn std::error::Error>> {
     let mut stream = TcpStream::connect("127.0.0.1:8080").await?;
-    println!("Connected to server.");
+    println!("{}", "Connected to server".green().bold());
 
     let current_dir = std::env::current_dir()?;
     let dir_name = current_dir.file_name().unwrap_or_default().to_str().unwrap_or_default();
 
+    println!("{}", format!("Pushing directory: {}", dir_name).cyan().bold());
+
     // 1. Send PUSH_DIR command
     let push_dir_cmd = format!("PUSH_DIR {}\n", dir_name);
     stream.write_all(push_dir_cmd.as_bytes()).await?;
-    println!("Sent command: {}", push_dir_cmd.trim());
+    println!("{}", "Started directory push".yellow());
+
+    let mut file_count = 0;
+    let mut total_bytes = 0;
 
     // 2. Walk directory and send each file
     for entry in WalkDir::new(&current_dir).into_iter().filter_map(|e| e.ok()) {
@@ -170,7 +180,6 @@ async fn push_directory() -> Result<(), Box<dyn std::error::Error>> {
             if relative_path_str.is_empty() { continue; }
             if relative_path.starts_with("target") || relative_path.starts_with(".git") { continue; }
 
-
             let content = fs::read(path).await?;
             
             // Send FILE command
@@ -180,21 +189,23 @@ async fn push_directory() -> Result<(), Box<dyn std::error::Error>> {
             // Send file content
             stream.write_all(&content).await?;
 
-            println!("Sent file: {} ({} bytes)", relative_path_str, content.len());
+            file_count += 1;
+            total_bytes += content.len();
+            println!("  {} {} ({} bytes)", "->".blue(), relative_path_str.bright_white(), content.len().to_string().dimmed());
         }
     }
 
     // 3. Send END_PUSH command
     stream.write_all(b"END_PUSH\n").await?;
-    println!("Sent command: END_PUSH");
-    println!("Directory push complete.");
+    println!("{}", "Directory push complete!".green().bold());
+    println!("{}", format!("Summary: {} files, {} bytes transferred", file_count, total_bytes).magenta());
 
     Ok(())
 }
 
 async fn list_folders() -> Result<(), Box<dyn std::error::Error>> {
     let mut stream = TcpStream::connect("127.0.0.1:8080").await?;
-    println!("Connected to server.");
+    println!("{}", "Connected to server".green().bold());
     
     // Send LIST command
     stream.write_all(b"LIST\n").await?;
@@ -203,35 +214,45 @@ async fn list_folders() -> Result<(), Box<dyn std::error::Error>> {
     let mut reader = tokio::io::BufReader::new(stream);
     let mut line = String::new();
     
-    println!("Folders in storage:");
+    println!("{}", "\nFolders in storage:".cyan().bold());
+    println!("{}", "─".repeat(40).dimmed());
+    
+    let mut folder_count = 0;
     while reader.read_line(&mut line).await? > 0 {
         let trimmed = line.trim();
         if trimmed == "END_LIST" {
             break;
         }
         if !trimmed.is_empty() {
-            println!("  {}", trimmed);
+            println!("  {} {}", "[DIR]".yellow(), trimmed.bright_white());
+            folder_count += 1;
         }
         line.clear();
     }
+    
+    println!("{}", "─".repeat(40).dimmed());
+    println!("{}", format!("Total folders: {}", folder_count).magenta());
     
     Ok(())
 }
 
 async fn pull_folder(folder_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut stream = TcpStream::connect("127.0.0.1:8080").await?;
-    println!("Connected to server.");
+    println!("{}", "Connected to server".green().bold());
     
     // Send PULL command
     let pull_cmd = format!("PULL {}\n", folder_name);
     stream.write_all(pull_cmd.as_bytes()).await?;
-    println!("Requesting folder: {}", folder_name);
+    println!("{}", format!("Requesting folder: {}", folder_name).cyan().bold());
     
     let mut reader = tokio::io::BufReader::new(stream);
     let mut line = String::new();
     
     // Create local directory
     fs::create_dir_all(folder_name).await?;
+    
+    let mut file_count = 0;
+    let mut total_bytes = 0;
     
     loop {
         line.clear();
@@ -245,7 +266,7 @@ async fn pull_folder(folder_name: &str) -> Result<(), Box<dyn std::error::Error>
         if trimmed_line.starts_with("FILE ") {
             let parts: Vec<&str> = trimmed_line["FILE ".len()..].splitn(2, ' ').collect();
             if parts.len() != 2 {
-                eprintln!("Malformed FILE command: {}", trimmed_line);
+                eprintln!("{}", format!("Malformed FILE command: {}", trimmed_line).red());
                 break;
             }
             
@@ -261,9 +282,12 @@ async fn pull_folder(folder_name: &str) -> Result<(), Box<dyn std::error::Error>
             reader.read_exact(&mut file_content).await?;
             
             fs::write(&local_path, &file_content).await?;
-            println!("Received file: {} ({} bytes)", relative_path, content_len);
+            println!("  {} {} ({} bytes)", "<-".blue(), relative_path.bright_white(), content_len.to_string().dimmed());
+            file_count += 1;
+            total_bytes += content_len;
         } else if trimmed_line == "END_PULL" {
-            println!("Pull complete for folder: {}", folder_name);
+            println!("{}", "Pull complete!".green().bold());
+            println!("{}", format!("Summary: {} files, {} bytes received", file_count, total_bytes).magenta());
             break;
         }
     }
