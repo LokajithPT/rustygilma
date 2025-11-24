@@ -1,3 +1,4 @@
+//wassup nigesh 
 use clap::{Parser, Subcommand};
 use walkdir::WalkDir;
 use std::env::current_dir;
@@ -99,7 +100,11 @@ async fn sync_directory() -> Result<(), Box<dyn std::error::Error>> {
             let relative_path_str = relative_path.to_str().unwrap_or_default();
 
             if relative_path_str.is_empty() { continue; }
-            if relative_path.starts_with("target") || relative_path.starts_with(".git") { continue; }
+            if relative_path.starts_with("target") || relative_path.starts_with(".git") || 
+               relative_path.starts_with(".venv") || relative_path.starts_with("node_modules") ||
+               relative_path.starts_with("dist") || relative_path.starts_with("build") ||
+               relative_path.starts_with("__pycache__") || relative_path.starts_with(".pytest_cache") ||
+               relative_path.starts_with(".mypy_cache") || relative_path.starts_with("coverage") { continue; }
 
             let metadata = std::fs::metadata(path)?;
             let local_modified = metadata.modified()?.duration_since(std::time::UNIX_EPOCH)?.as_secs();
@@ -178,7 +183,11 @@ async fn push_directory() -> Result<(), Box<dyn std::error::Error>> {
             let relative_path_str = relative_path.to_str().unwrap_or_default();
 
             if relative_path_str.is_empty() { continue; }
-            if relative_path.starts_with("target") || relative_path.starts_with(".git") { continue; }
+            if relative_path.starts_with("target") || relative_path.starts_with(".git") || 
+               relative_path.starts_with(".venv") || relative_path.starts_with("node_modules") ||
+               relative_path.starts_with("dist") || relative_path.starts_with("build") ||
+               relative_path.starts_with("__pycache__") || relative_path.starts_with(".pytest_cache") ||
+               relative_path.starts_with(".mypy_cache") || relative_path.starts_with("coverage") { continue; }
 
             let content = fs::read(path).await?;
             
@@ -272,6 +281,18 @@ async fn pull_folder(folder_name: &str) -> Result<(), Box<dyn std::error::Error>
             
             let relative_path = parts[0];
             let content_len: usize = parts[1].parse()?;
+            
+            // Skip target and .git directories
+            if relative_path.starts_with("target") || relative_path.starts_with(".git") || 
+               relative_path.starts_with(".venv") || relative_path.starts_with("node_modules") ||
+               relative_path.starts_with("dist") || relative_path.starts_with("build") ||
+               relative_path.starts_with("__pycache__") || relative_path.starts_with(".pytest_cache") ||
+               relative_path.starts_with(".mypy_cache") || relative_path.starts_with("coverage") {
+                // Still need to read the content to skip it
+                let mut file_content = vec![0; content_len];
+                reader.read_exact(&mut file_content).await?;
+                continue;
+            }
             
             let local_path = PathBuf::from(folder_name).join(relative_path);
             if let Some(parent) = local_path.parent() {
