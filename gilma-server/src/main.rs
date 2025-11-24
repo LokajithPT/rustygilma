@@ -18,8 +18,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         println!("Using storage directory: {:?}", storage_path);
     }
 
-    let listener = TcpListener::bind("127.0.0.1:8080").await?;
-    println!("Gilma server listening on 127.0.0.1:8080");
+    let listener = TcpListener::bind("0.0.0.0:8080").await?;
+    println!("Gilma server listening on 0.0.0.0:8080");
 
     loop {
         let (stream, addr) = listener.accept().await?;
