@@ -219,12 +219,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         break;
                     }
                     
-                    // Send all files in the folder
+                    // Send all files in the folder (excluding unnecessary directories)
                     for entry in WalkDir::new(&folder_path).into_iter().filter_map(|e| e.ok()) {
                         if entry.file_type().is_file() {
                             let path = entry.path();
                             let relative_path = path.strip_prefix(&folder_path).unwrap();
                             let relative_path_str = relative_path.to_str().unwrap_or_default();
+                            
+                            // Skip unnecessary directories
+                            if relative_path_str.starts_with("target") || relative_path_str.starts_with(".git") || 
+                               relative_path_str.starts_with(".venv") || relative_path_str.starts_with("node_modules") ||
+                               relative_path_str.starts_with("dist") || relative_path_str.starts_with("build") ||
+                               relative_path_str.starts_with("__pycache__") || relative_path_str.starts_with(".pytest_cache") ||
+                               relative_path_str.starts_with(".mypy_cache") || relative_path_str.starts_with("coverage") {
+                                continue;
+                            }
                             
                             let content = match fs::read(path).await {
                                 Ok(content) => content,
