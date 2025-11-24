@@ -65,7 +65,7 @@ async fn sync_directory() -> Result<(), Box<dyn std::error::Error>> {
     let dir_name = current_dir.file_name().unwrap_or_default().to_str().unwrap_or_default();
 
     // First connection: check server files
-    let mut stream = TcpStream::connect("100.106.103.45:8080").await?;
+    let mut stream = TcpStream::connect("100.104.132.24:8080").await?;
     println!("{}", "Connected to server for sync check".green().bold());
 
     let check_cmd = format!("CHECK {}\n", dir_name);
@@ -128,7 +128,7 @@ async fn sync_directory() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", format!("Syncing {} changed files...", files_to_send.len()).yellow().bold());
     
     // Second connection: send changed files
-    let mut stream = TcpStream::connect("100.106.103.45:8080").await?;
+    let mut stream = TcpStream::connect("100.104.132.24:8080").await?;
     
     // Send SYNC_DIR command
     let sync_cmd = format!("SYNC_DIR {}\n", dir_name);
@@ -158,7 +158,7 @@ async fn sync_directory() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn push_directory() -> Result<(), Box<dyn std::error::Error>> {
-    let mut stream = TcpStream::connect("100.106.103.45:8080").await?;
+    let mut stream = TcpStream::connect("100.104.132.24:8080").await?;
     println!("{}", "Connected to server".green().bold());
 
     let current_dir = std::env::current_dir()?;
@@ -213,7 +213,7 @@ async fn push_directory() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn list_folders() -> Result<(), Box<dyn std::error::Error>> {
-    let mut stream = TcpStream::connect("100.106.103.45:8080").await?;
+    let mut stream = TcpStream::connect("100.104.132.24:8080").await?;
     println!("{}", "Connected to server".green().bold());
     
     // Send LIST command
@@ -246,7 +246,7 @@ async fn list_folders() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn pull_folder(folder_name: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let mut stream = TcpStream::connect("100.106.103.45:8080").await?;
+    let mut stream = TcpStream::connect("100.104.132.24:8080").await?;
     println!("{}", "Connected to server".green().bold());
     
     // Send PULL command
